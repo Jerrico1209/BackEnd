@@ -1,3 +1,5 @@
+// Change EVERYTHING to PRISMA
+
 const hostname = '127.0.0.1'
 const port = '3000'
 
@@ -13,16 +15,18 @@ app.use(morgan('dev'))
 app.use(express.urlencoded( { extended : true } ))
 app.use(express.json())
 
+
+const { PrismaClient } = require('@prisma/client')
+const prisma = new PrismaClient()
+
+
 // Display the data in postgres
-app.get('/', async (req, res) => {
+app.get('/students', async (req, res) => {
     try {
-        const result = await db.query(
-            `SELECT * 
-            FROM students
-            ORDER BY id ASC`)
+        const result = await prisma.students.findMany()
         res.status(200).json({
             status: "success",
-            data: result.rows,
+            data: result,
         })
     }catch (err) {
         console.error(err)
@@ -34,10 +38,12 @@ app.get('/', async (req, res) => {
 app.post('/students', async (req, res) => {
     const {name, address} = req.body
     try{
-        const result = await db.query(
-            `INSERT into students (name, address)
-            values ('${name}', '${address}')`
-        )
+        await prisma.students.create({
+            data: {
+                name: name,
+                address: address,
+            }
+        })
         res.status(200).json({
             status: 'Success',
             message: 'Data has been insert successfully',
@@ -52,10 +58,13 @@ app.post('/students', async (req, res) => {
 app.get('/students/:id', async (req, res) => {
     const id = req.params.id
     try{
-        const result = await db.query(
-            `SELECT * FROM students WHERE id = '${id}'`
-        )
-        if (result.rows.length === 0){
+        // const result = await db.query(
+        //     `SELECT * FROM students WHERE id = '${id}'`
+        // )
+        const result = await prisma.students.findUnique({
+            where: {id: parseInt(id)}
+        })
+        if (result === null){
             res.status(404).json({
                 status: 'Failed',
                 message: 'There is no data for this id'
@@ -64,7 +73,7 @@ app.get('/students/:id', async (req, res) => {
             res.status(200).json({
                 status:'Success',
                 message: 'Data has been fetch successfully',
-                data: result.rows,
+                data: result,
             })
         )
     }catch(err){
@@ -82,11 +91,18 @@ app.put('/students/:id', async (req,res)=>{
         return res.status(400).send('please provide name and address')
     }
     try{
-        const result = await db.query(
-            `UPDATE students
-            SET name= '${name}', address= '${address}'
-            WHERE id = '${id}'`
-        )
+        await prisma.students.update({
+            // `UPDATE students
+            // SET name= '${name}', address= '${address}'
+            // WHERE id = '${id}'`
+            where: {
+                id : parseInt(id),
+            },
+            data: {
+                name: name,
+                address: address 
+            }
+        })
         res.status(200).json({
             status: 'Success',
             message: 'Data has been updated'
@@ -101,9 +117,14 @@ app.put('/students/:id', async (req,res)=>{
 app.delete('/students/:id', async (req, res) => {
     const id = req.params.id
     try{
-        const result = await db.query(
-            `DELETE FROM students
-            WHERE id = '${id}'`
+        await prisma.students.delete({
+            where:{
+                id: parseInt(id),
+            }
+        }
+            // `DELETE FROM students
+            // WHERE id = '${id}'`
+
         )
         res.status(200).json({
             status: 'Success',
